@@ -31,7 +31,7 @@ app.get('*', (req, res) => {
 });
 
 // Data structures
-let players = {}; // socket.id => { x, y, z, role, room, userId, userName }
+let players = {}; // socket.id => { x, y, z, role, room, userId, userName, avatar }
 let classrooms = {}; // classroomId => { students: [], pending: [], state: 'active'|'locked', teacher: null }
 let videoRooms = {}; // roomId => { participants: [] }
 let pendingRequests = new Set(); // Track pending requests to prevent duplicates
@@ -40,7 +40,7 @@ io.on("connection", socket => {
   console.log("Connected:", socket.id);
 
   // Join campus or classroom
-  socket.on("join", ({ userId, role, room }) => {
+  socket.on("join", ({ userId, role, room, avatar }) => {
     socket.join(room);
     players[socket.id] = { 
       id: socket.id, 
@@ -50,7 +50,8 @@ io.on("connection", socket => {
       role, 
       room, 
       userId, 
-      userName: userId 
+      userName: userId,
+      avatar // Store avatar
     };
 
     console.log(`User ${userId} joined room: ${room}`);
@@ -448,8 +449,19 @@ io.on("connection", socket => {
 
 // Helper to get all players in a room
 function getRoomPlayers(room) {
+  // Only return the properties needed by the client, including avatar
   return Object.fromEntries(
-    Object.entries(players).filter(([id, p]) => p.room === room)
+    Object.entries(players)
+      .filter(([id, p]) => p.room === room)
+      .map(([id, p]) => [id, {
+        x: p.x,
+        y: p.y,
+        z: p.z,
+        role: p.role,
+        userId: p.userId,
+        userName: p.userName,
+        avatar: p.avatar // Ensure avatar is sent
+      }])
   );
 }
 
